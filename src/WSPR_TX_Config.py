@@ -100,7 +100,7 @@ Structure of the code:
 #
 # Currently, we support both Python 2.x (mainly for MacOS) and Python 3.x
 #
-VERSION = "0.0.0.5"  ### Extreme Alpha Version
+VERSION = "0.0.1"  ### Beta Version
 
 import sys     # system hooks
 import os      # operating system hooks
@@ -374,8 +374,8 @@ class Model(object):
             _ports = ['COM%s' % (i + 1) for i in range(256)]
         elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
             for _name in os.listdir('/dev'):
-                if _name.startswith('tty') and ( len(self.name) > 3 ):
-                    if self.name[3].isalpha():
+                if _name.startswith('tty') and ( len(_name) > 3 ):
+                    if _name[3] == 'U':
                         _ports.append('/dev/'+_name)
         elif sys.platform.startswith('darwin'):
             for _name in os.listdir('/dev'):
@@ -398,7 +398,13 @@ class Model(object):
             except:
                 pass
         if len(self._serials) < 1:
-            sys.stderr.write('No serial ports found.')
+            sys.stderr.write('No serial ports found.\n')
+            if sys.platform.startswith('linux') and len(_ports)>0:
+                sys.stderr.write('This may be because the user has no rights to the USB ports.\n')
+                sys.stderr.write('If this is the case, add the user to the "dialout" group:\n')
+                sys.stderr.write('\tsudo gpasswd -a YourUsername dialout\n')
+                sys.stderr.write('where "YourUsername" is the user id that will run this tool.\n')
+                sys.stderr.write('You may need to log out and back in to have it take effect.\n')
             sys.exit(1)
 
     def getPorts(self): # Only used by the View to create a selector of possible ports
@@ -420,7 +426,7 @@ class Model(object):
                                      parity = serial.PARITY_NONE, stopbits = serial.STOPBITS_ONE,
                                      xonxoff = False, rtscts = False, dsrdtr = None, timeout = 1)
         except OSError:
-            sys.stderr.write('Port in use?')
+            sys.stderr.write('Port in use?\n')
             self._serialPort = 'None'
 
     def readPort(self):
@@ -1811,7 +1817,7 @@ class Controller():
     ################################################
     def handleMessage(self, msg):
         if len(msg)<5:
-            sys.stderr.write('Short message: '+msg)
+            sys.stderr.write('Short message: '+msg+'\n')
             return
         if msg[0] == '{' and msg[4] == '}':
             self.setPortStatus(True)
@@ -1842,20 +1848,20 @@ class Controller():
             self.view.setGenerating()
             self.view.program(2)
         else:
-            sys.stderr.write('unknown CCM received: '+data)
+            sys.stderr.write('unknown CCM received: '+data+'\n')
             self.model.sendPort('CCM','G')
     def handleOTP(self, data): # Option TX Pause
         if data.isdigit():
             self.v = int(data)
             self.view.pauseTime.set(self.v)
         else:
-            sys.stderr.write('unknown OTP received: '+data)
+            sys.stderr.write('unknown OTP received: '+data+'\n')
             self.model.sendPort('OTP','G')
     def handleOSM(self, data): # Option StartMode
         if data[0] in 'NWS':
             self.view.boot.set(data[0])
         else:
-            sys.stderr.write('unknown OSM received: '+data)
+            sys.stderr.write('unknown OSM received: '+data+'\n')
             self.model.sendPort('OSM','G')
     def handleOBD(self, data):
         self.filter = int(data[0:2])
@@ -1866,7 +1872,7 @@ class Controller():
             self.view.enable[self.filter].set(0)
             self.view.progress[self.filter].configure(style = 'blank.Horizontal.TProgressbar')
         else:
-            sys.stderr.write('unknown OBD response:'+data)
+            sys.stderr.write('unknown OBD response:'+data+'\n')
             self.model.sendPort('OBD','G')
     def handleOLC(self, data):
         if data[0] == 'G':
@@ -1874,7 +1880,7 @@ class Controller():
         elif data[0] == 'M':
             self.view.rpam.set('M')
         else:
-            sys.stderr.write('unknown OLC response:'+data)
+            sys.stderr.write('unknown OLC response:'+data+'\n')
             self.model.sendPort('OLC','G')            
     def handleOPW(self, data):
         if data[0] == 'N':
@@ -1882,7 +1888,7 @@ class Controller():
         elif data[0] == 'A':
             self.view.rpmode.set('A')
         else:
-            sys.stderr.write('unknown OPW response:'+data)
+            sys.stderr.write('unknown OPW response:'+data+'\n')
             self.model.sendPort('OPW','G')
     def handleDCS(self, data):
         self.view.call.set(data) # I don't check this
@@ -1903,7 +1909,7 @@ class Controller():
                 self.fq = int(data)
                 self.view.setFQ(self.data)
                 return
-        sys.stderr.write('Bad DGF data: '+data)
+        sys.stderr.write('Bad DGF data: '+data+'\n')
         self.model.sendPort('DGF','G')
         
     def handleFPN(self, data):
@@ -1921,11 +1927,11 @@ class Controller():
     def handleFLP(self, data):
         self.v = data[2:]
         if not self.v.isdigit():
-            sys.stderr.write('Invalid LPF requested: '+band)
+            sys.stderr.write('Invalid LPF requested: '+band+'\n')
             return -1
         self.filter = int(self.v)
         if self.filter > len(self.model.bands()):
-            sys.stderr.write('Device reported an unsupported LPF with an ID of {}.'.format(self.filter))
+            sys.stderr.write('Device reported an unsupported LPF with an ID of {}.\n'.format(self.filter))
             return -1
         self.view.installLP(self.filter)
         
@@ -1945,28 +1951,28 @@ class Controller():
             self.view.locked.config(text = 'Position Lock', font = ('Arial',18))
             self.view.r3l6.config(fg='black')
         else:
-            sys.stderr.write('unknown GLC response:'+data)
+            sys.stderr.write('unknown GLC response:'+data+'\n')
     def handleGSI(self, data): # Info for the GPS plot
         self.sats.append(data) # I don't check this
     def handleTFQ(self, data): # Current frequency
         if data.isdigit():
             self.view.setFrequency(data)
         else:
-            sys.stderr.write('unknown TFQ response: '+data)
+            sys.stderr.write('unknown TFQ response: '+data+'\n')
     def handleTON(self, data): # Transmit on? (T/F)
         if data[0] == 'T':
             self.view.tx(1)
         elif data[0] == 'F':
             self.view.tx(0)
         else:
-            sys.stderr.write('unknown TON response:'+data)
+            sys.stderr.write('unknown TON response:'+data+'\n')
             self.model.sendPort('TON','G')
     def handleMPS(self, data): # Progress while paused
         self.view.setActive(-1,'black')
         if data.isdigit():
             self.view.setProgress(-1,int(data))
         else:
-            sys.stderr.write('unknown MPS response: '+data)
+            sys.stderr.write('unknown MPS response: '+data+'\n')
     def handleMIN(self, data): # Informational Messages
         self.view.logInsert(data)
         self.setPortStatus(True)
@@ -1977,19 +1983,19 @@ class Controller():
         pass                   # Not used
     def handleTBN(self, data): # Next transmitting band 
         if not data.isdigit():
-            sys.stderr.write('invalid TBN band data:: '+data)
+            sys.stderr.write('invalid TBN band data:: '+data+'\n')
             return -1
         self.view.setActive(int(data),'black')
     def handleTWS(self, data): # Transmitting band status
         if not data[0:2].isdigit():
-            sys.stderr.write('invalid TWS band data:: '+data)
+            sys.stderr.write('invalid TWS band data:: '+data+'\n')
             return -1
         self.v = int(data[0:2])        
         self.view.setActive(self.v,'red') # This should be changed to blinking, I think
         if data[3:6].isdigit():
             self.view.setProgress(self.v,int(data[3:6]))
         else:
-            sys.stderr.write('unknown MPS response: '+data)
+            sys.stderr.write('unknown MPS response: '+data+'\n')
     def handleTCC(self, data): # End of cycle, use it to clear
         self.view.setProgress(-1,0)
 

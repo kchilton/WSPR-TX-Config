@@ -3,10 +3,28 @@ Configuration tool for the Zachtek WSPR TX products
 
 ******************* WARNING *******************
 
-This project is pre-alpha - all source and
-distribution files are prone to have severe bugs.
+This project is beta - all source and
+distribution files are prone to have bugs.
 
 *Use at your own risk!*
+
+***********************************************
+
+Distribution files are available in dist/ for some environments.
+
+For the Windows version, please install the CH34x driver, or the program will
+refuse to run.  If running from the source code, please install Python from
+the official Python distribution, and not the Windows provided distribution from
+Microsoft, which is incomplete.  Also if running the source Python code dirrectly,
+remember to install PySerial (ie python3 -m pip install PySerial).
+
+On some machines, you may find a conflicting and incompatible Python
+module also called "serial".  If this is encountered, remove "serial"
+and then install PySerial.
+
+The source should work for python2 and python3, but this has only been
+"lightly" tested so far, and only on the latest versions of MacOS, Windows,
+and CentOS.
 
 ***********************************************
 
